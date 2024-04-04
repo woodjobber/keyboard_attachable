@@ -84,7 +84,7 @@ class KeyboardAttachable extends StatefulWidget {
 }
 
 class _KeyboardAttachableState extends State<KeyboardAttachable>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final KeyboardVisibilityController _keyboardVisibility =
       const DefaultKeyboardVisibilityController();
 
@@ -98,13 +98,13 @@ class _KeyboardAttachableState extends State<KeyboardAttachable>
 
   @override
   void initState() {
-    _visibilitySubscription = _keyboardVisibility.onChange.listen(_animate);
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _visibilitySubscription = _keyboardVisibility.onChange.listen(_animate);
   }
 
   @override
   Widget build(BuildContext context) {
-    _updateBottomSizeIfNeeded(context);
     final animation = _controller.animation;
     final offsetAnimation = CurvedAnimation(
       parent: animation,
@@ -129,13 +129,7 @@ class _KeyboardAttachableState extends State<KeyboardAttachable>
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    _visibilitySubscription.cancel();
-    super.dispose();
-  }
-
-  void _updateBottomSizeIfNeeded(BuildContext context) {
+  void didChangeMetrics() {
     final mediaQuery = MediaQuery.of(context);
     final keyboardHeight = mediaQuery.viewInsets.bottom;
     final screenHeight = mediaQuery.size.height;
@@ -149,6 +143,14 @@ class _KeyboardAttachableState extends State<KeyboardAttachable>
       _bottomInset = bottomInset;
       _animationBegin = isKeyboardDismissed ? 0 : animationBegin;
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _controller.dispose();
+    _visibilitySubscription.cancel();
+    super.dispose();
   }
 
   void _animate(bool isKeyboardVisible) =>
