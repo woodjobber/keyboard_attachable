@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:keyboard_attachable/keyboard_attachable.dart';
 import 'package:keyboard_attachable/src/animation/keyboard_animation_controller.dart';
 import 'package:keyboard_attachable/src/animation/keyboard_animation_injector.dart';
+import 'package:keyboard_attachable/src/data/keyboard_animation_data.dart';
 import 'package:keyboard_attachable/src/visibility/default_keyboard_visibility_controller.dart';
 import 'package:keyboard_attachable/src/visibility/keyboard_visibility_controller.dart';
 
@@ -37,11 +38,11 @@ class KeyboardAttachable extends StatefulWidget {
   /// Creates a widget that smoothly adds space below its child when the
   /// keyboard is shown or hidden.
   const KeyboardAttachable({
+    super.key,
     this.child,
     this.transitionBuilder = KeyboardAttachable._defaultBuilder,
     this.backgroundColor = Colors.transparent,
-    Key? key,
-  }) : super(key: key);
+  });
 
   /// The color that fills the space that is added when the keyboard appears.
   ///
@@ -85,52 +86,62 @@ class KeyboardAttachable extends StatefulWidget {
 
 class _KeyboardAttachableState extends State<KeyboardAttachable>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  final KeyboardVisibilityController _keyboardVisibility =
-      const DefaultKeyboardVisibilityController();
+  late final KeyboardVisibilityController _keyboardVisibility;
 
-  late final KeyboardAnimationController _controller =
-      KeyboardAnimationInjector(this).getPlatformController();
-  late StreamSubscription<bool> _visibilitySubscription;
+  late final KeyboardAnimationController _controller;
+  late final StreamSubscription<bool> _visibilitySubscription;
 
-  final _keyboardAttachableKey = GlobalKey();
-  double _bottomInset = 0;
-  double _animationBegin = 0;
+  late final GlobalKey _keyboardAttachableKey;
+  late final ValueNotifier<KeyboardAnimationData>
+      _keyboardAnimationDataNotifier;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    _keyboardAttachableKey = GlobalKey();
+    _keyboardVisibility = const DefaultKeyboardVisibilityController();
+    _controller = KeyboardAnimationInjector(this).getPlatformController();
+    _keyboardAnimationDataNotifier = ValueNotifier(
+      const KeyboardAnimationData(),
+    );
     _visibilitySubscription = _keyboardVisibility.onChange.listen(_animate);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final animation = _controller.animation;
-    final offsetAnimation = CurvedAnimation(
-      parent: animation,
-      curve: Interval(_animationBegin, 1),
-    );
-    final child = widget.child;
-    return Column(
-      key: _keyboardAttachableKey,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (child != null)
-          widget.transitionBuilder(child, offsetAnimation, _bottomInset),
-        SizeTransition(
-          sizeFactor: offsetAnimation,
-          child: Container(
-            height: _bottomInset,
-            color: widget.backgroundColor,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<KeyboardAnimationData>(
+          valueListenable: _keyboardAnimationDataNotifier,
+          builder: (_, keyboardAnimatinoData, __) {
+            final offsetAnimation = CurvedAnimation(
+              parent: _controller.animation,
+              curve: Interval(keyboardAnimatinoData.animationBegin, 1),
+            );
+            final child = widget.child;
+            return Column(
+              key: _keyboardAttachableKey,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (child != null)
+                  widget.transitionBuilder(
+                    child,
+                    offsetAnimation,
+                    keyboardAnimatinoData.bottomInset,
+                  ),
+                SizeTransition(
+                  sizeFactor: offsetAnimation,
+                  child: Container(
+                    height: keyboardAnimatinoData.bottomInset,
+                    color: widget.backgroundColor,
+                  ),
+                ),
+              ],
+            );
+          });
 
   @override
   void didChangeMetrics() {
-    final mediaQuery = MediaQuery.of(context);
+    final mediaQuery = MediaQueryData.fromView(View.of(context));
     final keyboardHeight = mediaQuery.viewInsets.bottom;
     final screenHeight = mediaQuery.size.height;
     final keyboardAttachableBounds = _globalBounds(key: _keyboardAttachableKey);
@@ -138,10 +149,14 @@ class _KeyboardAttachableState extends State<KeyboardAttachable>
     final bottomInset =
         (keyboardHeight - bottomOffset).clamp(0, keyboardHeight).toDouble();
     final isKeyboardDismissed = keyboardHeight == 0;
-    final animationBegin = (1 - bottomInset / keyboardHeight).toDouble();
+    final animationBegin = keyboardHeight != 0
+        ? (1 - bottomInset / keyboardHeight).toDouble()
+        : 0.0;
     if (bottomInset > 0) {
-      _bottomInset = bottomInset;
-      _animationBegin = isKeyboardDismissed ? 0 : animationBegin;
+      _keyboardAnimationDataNotifier.value = KeyboardAnimationData(
+        animationBegin: isKeyboardDismissed ? 0 : animationBegin,
+        bottomInset: bottomInset,
+      );
     }
   }
 
@@ -149,6 +164,7 @@ class _KeyboardAttachableState extends State<KeyboardAttachable>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
+    _keyboardAnimationDataNotifier.dispose();
     _visibilitySubscription.cancel();
     super.dispose();
   }
