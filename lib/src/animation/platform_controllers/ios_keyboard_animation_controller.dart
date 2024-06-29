@@ -5,9 +5,10 @@ import 'package:keyboard_attachable/src/animation/keyboard_animation_controller.
 
 class IOSKeyboardAnimationController implements KeyboardAnimationController {
   IOSKeyboardAnimationController({required TickerProvider vsync})
-      : _spring = const SpringDescription(mass: 8, stiffness: 1, damping: 4.5),
-        _springVelocity = 10,
-        _controller = AnimationController(vsync: vsync);
+      : _spring = const SpringDescription(mass: 8, stiffness: 1, damping: 1),
+        _springVelocity = 8,
+        _controller = AnimationController(
+            vsync: vsync, duration: const Duration(milliseconds: 150));
 
   final SpringDescription _spring;
   final double _springVelocity;

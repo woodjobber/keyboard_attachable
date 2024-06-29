@@ -19,7 +19,7 @@ class KeyboardAttachablePage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(title: const Text("Keyboard Attachable demo")),
-        body: FooterLayout(
+        body: AutoDismissFooterLayout(
           footer: KeyboardAttachableFooter(),
           child: ColorsList(),
         ),
@@ -88,8 +88,20 @@ class ColorsList extends StatelessWidget {
   Widget build(BuildContext context) => ListView.builder(
         itemExtent: 66,
         itemCount: Colors.primaries.length,
-        itemBuilder: (_, i) => Container(
-          color: Colors.primaries[i].withOpacity(0.2),
-        ),
+        itemBuilder: (_, i) => i == 1
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: "Tap me!",
+                    fillColor: Colors.white,
+                    filled: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              )
+            : Container(
+                color: Colors.primaries[i].withOpacity(0.2),
+              ),
       );
 }

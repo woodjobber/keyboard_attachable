@@ -112,10 +112,10 @@ class _KeyboardAttachableState extends State<KeyboardAttachable>
   Widget build(BuildContext context) =>
       ValueListenableBuilder<KeyboardAnimationData>(
           valueListenable: _keyboardAnimationDataNotifier,
-          builder: (_, keyboardAnimatinoData, __) {
+          builder: (_, keyboardAnimationData, __) {
             final offsetAnimation = CurvedAnimation(
               parent: _controller.animation,
-              curve: Interval(keyboardAnimatinoData.animationBegin, 1),
+              curve: Interval(keyboardAnimationData.animationBegin, 1),
             );
             final child = widget.child;
             return Column(
@@ -126,12 +126,12 @@ class _KeyboardAttachableState extends State<KeyboardAttachable>
                   widget.transitionBuilder(
                     child,
                     offsetAnimation,
-                    keyboardAnimatinoData.bottomInset,
+                    keyboardAnimationData.bottomInset,
                   ),
                 SizeTransition(
                   sizeFactor: offsetAnimation,
                   child: Container(
-                    height: keyboardAnimatinoData.bottomInset,
+                    height: keyboardAnimationData.bottomInset,
                     color: widget.backgroundColor,
                   ),
                 ),
